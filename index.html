@@ -1006,16 +1006,18 @@
                 
                 if (stimulusHistory.length >= 2) {
                     // 30%の確率でターゲット（一致）条件を決定
-                    isTarget = Math.random() < 0.3;
+                    const shouldBeTarget = Math.random() < 0.3;
                     
-                    if (isTarget) {
+                    if (shouldBeTarget) {
                         // ターゲット条件：2個前と同じ数字
                         currentNumber = stimulusHistory[stimulusHistory.length - 2];
+                        isTarget = true;
                     } else {
                         // 非ターゲット条件：2個前と異なる数字をランダム選択
                         const targetNumber = stimulusHistory[stimulusHistory.length - 2];
                         const availableNumbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter(n => n !== targetNumber);
                         currentNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
+                        isTarget = false;
                     }
                 } else {
                     // 最初の2試行はランダム（ターゲット判定不可能）
@@ -1072,8 +1074,8 @@
                 previousTask = null;
                 // currentTaskは既に初期化時に設定済み
             } else {
-                // 2試行目以降：50%の確率で切り替え
-                if (Math.random() < 0.5) {
+                // 2試行目以降：65%の確率で切り替え
+                if (Math.random() < 0.65) {
                     previousTask = currentTask;
                     currentTask = currentTask === 'color' ? 'shape' : 'color';
                 } else {
