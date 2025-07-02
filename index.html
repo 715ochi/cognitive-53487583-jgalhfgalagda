@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>実行機能課題セレクター</title>
+    <title>iPad版実行機能課題アプリ</title>
     <style>
         * {
             margin: 0;
@@ -350,7 +350,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🧠 実行機能課題セレクター</h1>
+        <h1>🧠 iPad版実行機能課題アプリ</h1>
         
         <!-- セットアップ画面 -->
         <div id="setupScreen" class="screen active setup-screen">
@@ -370,6 +370,13 @@
                     <p><strong>抑制機能の測定</strong></p>
                     <p>中央の矢印の向きを判断します。周りの矢印は無視してください。</p>
                     <div class="task-example">例: ←←→←← → 右向き</div>
+                </div>
+                
+                <div class="task-card" data-task="stroop" onclick="toggleTask('stroop')">
+                    <h3>🌈 ストループ課題</h3>
+                    <p><strong>抑制機能の測定</strong></p>
+                    <p>上段のフォントカラーと下段の色名単語の意味が一致しているかを判断します。</p>
+                    <div class="task-example">例: <span style="color: red;">XXXX</span><br>みどり → 不一致</div>
                 </div>
                 
                 <div class="task-card" data-task="shifting" onclick="toggleTask('shifting')">
@@ -428,7 +435,28 @@
                 </select>
             </div>
             
+            <div class="setting-group">
+                <label>
+                    <input type="checkbox" id="autoSave" checked style="width: auto; margin-right: 10px;">
+                    実験データを自動保存する（課題ごと）
+                </label>
+                <p style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-top: 5px;">
+                    ※チェックを外すと、データはセッション終了時に削除されます<br>
+                    ※課題ごとに自動保存することでメモリ消費を抑制します
+                </p>
+            </div>
+            
+            <!-- 保存データ管理 -->
+            <div id="savedDataSection" style="margin-top: 30px; display: none;">
+                <div style="background: rgba(255,255,255,0.15); border-radius: 15px; padding: 20px; border: 2px solid rgba(255,255,255,0.3);">
+                    <h4>💾 保存されたデータ</h4>
+                    <div id="savedDataList"></div>
+                    <button class="btn btn-secondary" onclick="refreshSavedData()" style="margin-top: 10px;">🔄 更新</button>
+                </div>
+            </div>
+            
             <button id="startBtn" class="btn" onclick="startSelectedTasks()" disabled>🚀 選択した課題を開始</button>
+            <button class="btn btn-secondary" onclick="toggleSavedDataView()">💾 保存データ確認</button>
         </div>
         
         <!-- 課題画面 -->
@@ -451,7 +479,7 @@
         <div id="resultsScreen" class="screen results-screen">
             <h2>📊 課題結果</h2>
             <div id="resultsContent"></div>
-            <button class="btn" onclick="downloadCSV()">📥 CSVダウンロード</button>
+            <button class="btn" onclick="downloadAllDataCSV()">📥 全データCSVダウンロード</button>
             <button class="btn btn-secondary" onclick="resetToSelection()">🔄 課題選択に戻る</button>
         </div>
     </div>
@@ -461,11 +489,16 @@
         let selectedTasks = [];
         let participantId = 'P001';
         let currentTaskIndex = 0;
-        let allExperimentData = [];
+        let sessionId = '';
         let stimulusDuration = 3000;
         let interStimulusInterval = 1000;
         
-        // 現在の課題データ
+        // 課題固有データ
+        let stimulusHistory = []; // n-back用
+        let currentTask = 'color'; // shifting用
+        let previousTask = null; // shifting用
+        
+        // 現在の課題データ（メモリ効率重視）
         let currentTaskData = [];
         let currentTrial = 0;
         let totalTrials = 0;
@@ -474,16 +507,184 @@
         let taskType = '';
         let stimulusTimer = null; // タイマー管理用
         
-        // 課題固有データ
-        let stimulusHistory = []; // n-back用
-        let currentTask = 'color'; // shifting用
-        let previousTask = null; // shifting用
+        // セッション初期化
+        function initializeSession() {
+            sessionId = `session_${participantId}_${new Date().getTime()}`;
+            console.log('新しいセッション開始:', sessionId);
+        }
+        
+        // 課題ごとの自動保存機能（メモリ効率重視）
+        function autoSaveTaskData(taskType, taskData) {
+            const autoSaveCheckbox = document.getElementById('autoSave');
+            if (!autoSaveCheckbox || !autoSaveCheckbox.checked) {
+                console.log('自動保存は無効になっています');
+                return;
+            }
+            
+            try {
+                const saveData = {
+                    sessionId: sessionId,
+                    participantId: participantId,
+                    taskType: taskType,
+                    taskData: taskData,
+                    completedAt: new Date().toISOString(),
+                    settings: {
+                        stimulusDuration: stimulusDuration,
+                        interStimulusInterval: interStimulusInterval,
+                        trialCount: document.getElementById('trialCount').value
+                    },
+                    version: '2.0'
+                };
+                
+                const saveKey = `task_${sessionId}_${taskType}_${new Date().getTime()}`;
+                
+                // JavaScript変数に課題ごとに保存
+                window.savedTaskData = window.savedTaskData || {};
+                window.savedTaskData[saveKey] = saveData;
+                
+                console.log(`課題データを自動保存しました: ${taskType} (${taskData.length}試行)`, saveKey);
+                showSaveConfirmation(`${getTaskName(taskType)}を保存`);
+                
+            } catch (error) {
+                console.log('自動保存エラー:', error);
+            }
+        }
+        
+        // 課題名取得
+        function getTaskName(taskType) {
+            const taskNames = {
+                flanker: 'フランカー課題',
+                stroop: 'ストループ課題',
+                shifting: 'シフティング課題',
+                nback: 'n-back課題'
+            };
+            return taskNames[taskType] || taskType;
+        }
+        
+        // 保存確認の表示
+        function showSaveConfirmation(message) {
+            const confirmation = document.createElement('div');
+            confirmation.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(45deg, #4ECDC4, #44A08D);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px;
+                font-weight: bold;
+                z-index: 1000;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                opacity: 0;
+                transform: translateY(-20px);
+                transition: all 0.3s ease;
+            `;
+            confirmation.textContent = `✓ ${message}`;
+            
+            document.body.appendChild(confirmation);
+            
+            // アニメーション
+            setTimeout(() => {
+                confirmation.style.opacity = '1';
+                confirmation.style.transform = 'translateY(0)';
+            }, 100);
+            
+            setTimeout(() => {
+                if (document.body.contains(confirmation)) {
+                    confirmation.style.opacity = '0';
+                    confirmation.style.transform = 'translateY(-20px)';
+                    setTimeout(() => {
+                        if (document.body.contains(confirmation)) {
+                            document.body.removeChild(confirmation);
+                        }
+                    }, 300);
+                }
+            }, 3000);
+        }
+        
+        // セッションの全データを取得
+        function getSessionData() {
+            try {
+                if (!window.savedTaskData) return [];
+                
+                return Object.keys(window.savedTaskData)
+                    .filter(key => window.savedTaskData[key].sessionId === sessionId)
+                    .map(key => window.savedTaskData[key]);
+            } catch (error) {
+                console.log('セッションデータ取得エラー:', error);
+                return [];
+            }
+        }
+        
+        // 保存されたデータの復元機能
+        function loadSavedData() {
+            try {
+                if (!window.savedTaskData) return [];
+                
+                // セッションごとにグループ化
+                const sessionGroups = {};
+                Object.keys(window.savedTaskData).forEach(key => {
+                    const data = window.savedTaskData[key];
+                    const sessionId = data.sessionId;
+                    
+                    if (!sessionGroups[sessionId]) {
+                        sessionGroups[sessionId] = {
+                            sessionId: sessionId,
+                            participantId: data.participantId,
+                            tasks: [],
+                            completedAt: data.completedAt,
+                            totalTrials: 0
+                        };
+                    }
+                    
+                    sessionGroups[sessionId].tasks.push({
+                        taskType: data.taskType,
+                        taskName: getTaskName(data.taskType),
+                        trialCount: data.taskData.length,
+                        completedAt: data.completedAt
+                    });
+                    
+                    sessionGroups[sessionId].totalTrials += data.taskData.length;
+                    
+                    // 最新の完了時刻を保持
+                    if (new Date(data.completedAt) > new Date(sessionGroups[sessionId].completedAt)) {
+                        sessionGroups[sessionId].completedAt = data.completedAt;
+                    }
+                });
+                
+                return Object.values(sessionGroups).sort((a, b) => 
+                    new Date(b.completedAt) - new Date(a.completedAt)
+                );
+                
+            } catch (error) {
+                console.log('データ読み込みエラー:', error);
+                return [];
+            }
+        }
+        
+        // 保存データの削除
+        function deleteSavedSession(sessionId) {
+            try {
+                if (!window.savedTaskData) return;
+                
+                const keysToDelete = Object.keys(window.savedTaskData)
+                    .filter(key => window.savedTaskData[key].sessionId === sessionId);
+                
+                keysToDelete.forEach(key => {
+                    delete window.savedTaskData[key];
+                });
+                
+                console.log(`セッションデータを削除しました: ${sessionId} (${keysToDelete.length}件)`);
+            } catch (error) {
+                console.log('削除エラー:', error);
+            }
+        }
         
         // 課題設定
         const taskConfigs = {
-            short: { flanker: 20, shifting: 30, nback: 25 },
-            standard: { flanker: 40, shifting: 50, nback: 40 },
-            long: { flanker: 60, shifting: 80, nback: 60 }
+            short: { flanker: 20, stroop: 20, shifting: 30, nback: 25 },
+            standard: { flanker: 40, stroop: 30, shifting: 50, nback: 40 },
+            long: { flanker: 60, stroop: 40, shifting: 80, nback: 60 }
         };
         
         function toggleTask(task) {
@@ -512,6 +713,7 @@
                 
                 const taskNames = {
                     flanker: 'フランカー課題（抑制機能）',
+                    stroop: 'ストループ課題（抑制機能）',
                     shifting: 'シフティング課題（認知的柔軟性）',
                     nback: 'n-back課題（ワーキングメモリ）'
                 };
@@ -533,8 +735,10 @@
             stimulusDuration = parseInt(document.getElementById('stimulusDuration').value);
             interStimulusInterval = parseInt(document.getElementById('interStimulusInterval').value);
             
+            // セッション初期化
+            initializeSession();
+            
             // データをリセット
-            allExperimentData = [];
             currentTaskIndex = 0;
             
             // 最初の課題を開始
@@ -544,6 +748,7 @@
         
         function startNextTask(config) {
             if (currentTaskIndex >= selectedTasks.length) {
+                // 全課題完了
                 showResults();
                 return;
             }
@@ -559,7 +764,7 @@
                 stimulusTimer = null;
             }
             
-            // メモリ効率のためデータをクリア
+            // 課題データをリセット（メモリ効率）
             currentTaskData = [];
             currentTrial = 0;
             isWaitingForResponse = false;
@@ -570,6 +775,9 @@
             switch(taskType) {
                 case 'flanker':
                     totalTrials = config.flanker;
+                    break;
+                case 'stroop':
+                    totalTrials = config.stroop;
                     break;
                 case 'shifting':
                     totalTrials = config.shifting;
@@ -597,6 +805,7 @@
         function setupTaskUI() {
             const headers = {
                 flanker: 'フランカー課題：中央の矢印の向きを判断してください',
+                stroop: 'ストループ課題：上段のフォントカラーと下段の色名が一致するか判断してください',
                 shifting: 'シフティング課題：指示に従って色または形を判断してください',
                 nback: '2-back課題：2個前と同じ数字が現れたら「一致」を選択してください'
             };
@@ -610,6 +819,11 @@
                 responseArea.innerHTML = `
                     <button class="response-btn" onclick="respond('left')">← 左</button>
                     <button class="response-btn" onclick="respond('right')">右 →</button>
+                `;
+            } else if (taskType === 'stroop') {
+                responseArea.innerHTML = `
+                    <button class="response-btn" onclick="respond(true)" style="background: linear-gradient(45deg, #2ECC71, #27AE60);">✓ 一致</button>
+                    <button class="response-btn" onclick="respond(false)" style="background: linear-gradient(45deg, #E74C3C, #C0392B);">✗ 不一致</button>
                 `;
             } else if (taskType === 'shifting') {
                 responseArea.innerHTML = `
@@ -628,8 +842,9 @@
         
         function nextTrial() {
             if (currentTrial >= totalTrials) {
-                // 現在の課題完了
-                allExperimentData.push(...currentTaskData);
+                // 現在の課題完了 - 課題ごとに保存してメモリ解放
+                autoSaveTaskData(taskType, currentTaskData);
+                
                 currentTaskIndex++;
                 
                 // タイマーをクリア
@@ -638,7 +853,7 @@
                     stimulusTimer = null;
                 }
                 
-                // メモリ解放
+                // メモリ効率のため現在の課題データをクリア
                 currentTaskData = [];
                 
                 const config = taskConfigs[document.getElementById('trialCount').value];
@@ -698,6 +913,62 @@
                 document.getElementById('stimulus').textContent = stimulusValue;
                 document.getElementById('stimulus').className = 'stimulus';
             } 
+            else if (taskType === 'stroop') {
+                const colors = ['red', 'green', 'blue', 'yellow'];
+                const colorNames = ['あか', 'みどり', 'あお', 'きいろ'];
+                const colorMap = { red: 'あか', green: 'みどり', blue: 'あお', yellow: 'きいろ' };
+                
+                // 上段の色をランダムに選択
+                const upperColor = colors[Math.floor(Math.random() * colors.length)];
+                // 下段の色名をランダムに選択
+                const lowerColorName = colorNames[Math.floor(Math.random() * colorNames.length)];
+                
+                // 一致するかどうかを判定
+                const isMatch = (colorMap[upperColor] === lowerColorName);
+                correctAnswer = isMatch;
+                
+                // 上段のテキストを決定（ニュートラル条件、一致条件、不一致条件）
+                const conditions = ['neutral', 'congruent', 'incongruent'];
+                const condition = conditions[Math.floor(Math.random() * conditions.length)];
+                
+                let upperText;
+                if (condition === 'neutral') {
+                    upperText = 'XXXX';
+                } else if (condition === 'congruent') {
+                    upperText = colorMap[upperColor]; // 上段の色と同じ色名
+                } else { // incongruent
+                    const wrongColorNames = colorNames.filter(name => name !== colorMap[upperColor]);
+                    upperText = wrongColorNames[Math.floor(Math.random() * wrongColorNames.length)];
+                }
+                
+                stimulusValue = { 
+                    condition, 
+                    upperText, 
+                    upperColor, 
+                    lowerColorName, 
+                    isMatch 
+                };
+                
+                // 上段を先に表示
+                const stimulus = document.getElementById('stimulus');
+                stimulus.innerHTML = `
+                    <div style="font-size: 4rem; margin-bottom: 20px; color: ${upperColor}; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+                        ${upperText}
+                    </div>
+                    <div id="stroopLower" style="font-size: 3rem; color: black; font-weight: bold; visibility: hidden;">
+                        ${lowerColorName}
+                    </div>
+                `;
+                stimulus.className = 'stimulus';
+                
+                // 100ms後に下段を表示
+                setTimeout(() => {
+                    const lowerElement = document.getElementById('stroopLower');
+                    if (lowerElement) {
+                        lowerElement.style.visibility = 'visible';
+                    }
+                }, 100);
+            }
             else if (taskType === 'shifting') {
                 const colors = ['red', 'green'];
                 const shapes = ['circle', 'square'];
@@ -731,6 +1002,7 @@
             
             // 試行データを記録
             const trialData = {
+                sessionId: sessionId,
                 participantId: participantId,
                 taskType: taskType,
                 trial: currentTrial,
@@ -839,6 +1111,7 @@
             
             const taskNames = {
                 flanker: 'フランカー',
+                stroop: 'ストループ',
                 shifting: 'シフティング',
                 nback: 'n-back'
             };
@@ -851,44 +1124,55 @@
             hideAllScreens();
             document.getElementById('resultsScreen').classList.add('active');
             
+            const sessionData = getSessionData();
             let resultsHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">';
+            
+            let totalTrials = 0;
+            let totalValidTrials = 0;
             
             // 実行した課題の結果を表示
             selectedTasks.forEach(task => {
-                const taskData = allExperimentData.filter(d => d.taskType === task);
-                const results = calculateResults(taskData, task);
-                
-                const taskNames = {
-                    flanker: '🎯 フランカー課題（抑制機能）',
-                    shifting: '🔄 シフティング課題（認知的柔軟性）',
-                    nback: '🧠 n-back課題（ワーキングメモリ）'
-                };
-                
-                resultsHTML += `
-                    <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px;">
-                        <h3>${taskNames[task]}</h3>
-                        <div class="result-item">正答率: ${results.accuracy}%</div>
-                        <div class="result-item">平均RT: ${results.meanRT}ms</div>
-                        <div class="result-item">有効試行: ${results.validTrials} / ${results.totalTrials}</div>
-                        <div class="result-item">タイムアウト: ${results.timeoutTrials}試行</div>
-                        ${results.specialMetric || ''}
-                    </div>
-                `;
+                const taskData = sessionData.find(d => d.taskType === task);
+                if (taskData) {
+                    const results = calculateResults(taskData.taskData, task);
+                    totalTrials += results.totalTrials;
+                    totalValidTrials += results.validTrials;
+                    
+                    const taskNames = {
+                        flanker: '🎯 フランカー課題（抑制機能）',
+                        stroop: '🌈 ストループ課題（抑制機能）',
+                        shifting: '🔄 シフティング課題（認知的柔軟性）',
+                        nback: '🧠 n-back課題（ワーキングメモリ）'
+                    };
+                    
+                    resultsHTML += `
+                        <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px;">
+                            <h3>${taskNames[task]}</h3>
+                            <div class="result-item">正答率: ${results.accuracy}%</div>
+                            <div class="result-item">平均RT: ${results.meanRT}ms</div>
+                            <div class="result-item">有効試行: ${results.validTrials} / ${results.totalTrials}</div>
+                            <div class="result-item">タイムアウト: ${results.timeoutTrials}試行</div>
+                            ${results.specialMetric || ''}
+                        </div>
+                    `;
+                }
             });
             
             resultsHTML += '</div>';
             
             resultsHTML += `
                 <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 15px;">
-                    <h3>📈 実験情報</h3>
+                    <h3>📈 セッション情報</h3>
+                    <p>セッションID: ${sessionId}</p>
                     <p>実行課題数: ${selectedTasks.length}</p>
-                    <p>総試行数: ${allExperimentData.length}</p>
-                    <p>有効試行数: ${allExperimentData.filter(d => d.response !== null).length}</p>
-                    <p>タイムアウト試行数: ${allExperimentData.filter(d => d.response === null).length}</p>
+                    <p>総試行数: ${totalTrials}</p>
+                    <p>有効試行数: ${totalValidTrials}</p>
+                    <p>タイムアウト試行数: ${totalTrials - totalValidTrials}</p>
                     <p>参加者ID: ${participantId}</p>
                     <p>完了時刻: ${new Date().toLocaleTimeString()}</p>
                     <p style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-top: 10px;">
-                        ※正答率はタイムアウト試行を除外して計算しています
+                        ※正答率はタイムアウト試行を除外して計算<br>
+                        ※データは課題ごとに自動保存済み
                     </p>
                 </div>
             `;
@@ -897,7 +1181,7 @@
         }
         
         function calculateResults(data, taskType) {
-            if (!data.length) return { accuracy: 0, meanRT: 0, validTrials: 0 };
+            if (!data.length) return { accuracy: 0, meanRT: 0, validTrials: 0, totalTrials: 0, timeoutTrials: 0 };
             
             // 有効試行（反応があった試行）と正答試行を分離
             const validTrials = data.filter(d => d.response !== null);
@@ -935,26 +1219,37 @@
             };
         }
         
-        function downloadCSV() {
+        // 全データのCSVダウンロード
+        function downloadAllDataCSV() {
+            const sessionData = getSessionData();
+            
+            if (sessionData.length === 0) {
+                alert('ダウンロードするデータがありません');
+                return;
+            }
+            
             const headers = [
-                'participantId', 'taskType', 'trial', 'stimulus', 'correctAnswer', 
+                'sessionId', 'participantId', 'taskType', 'trial', 'stimulus', 'correctAnswer', 
                 'response', 'accuracy', 'reactionTime', 'timestamp'
             ];
             
             let csvContent = headers.join(',') + '\n';
             
-            allExperimentData.forEach(trial => {
-                const row = headers.map(header => {
-                    let value = trial[header];
-                    if (typeof value === 'object' && value !== null) {
-                        value = JSON.stringify(value);
-                    }
-                    if (typeof value === 'string' && value.includes(',')) {
-                        value = `"${value}"`;
-                    }
-                    return value;
-                }).join(',');
-                csvContent += row + '\n';
+            // 全ての課題データを統合
+            sessionData.forEach(taskSession => {
+                taskSession.taskData.forEach(trial => {
+                    const row = headers.map(header => {
+                        let value = trial[header];
+                        if (typeof value === 'object' && value !== null) {
+                            value = JSON.stringify(value);
+                        }
+                        if (typeof value === 'string' && value.includes(',')) {
+                            value = `"${value}"`;
+                        }
+                        return value;
+                    }).join(',');
+                    csvContent += row + '\n';
+                });
             });
             
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -962,8 +1257,11 @@
             const url = URL.createObjectURL(blob);
             
             const selectedTaskNames = selectedTasks.join('_');
+            const dateString = new Date().toISOString().split('T')[0];
+            const timeString = new Date().toTimeString().split(' ')[0].replace(/:/g, '');
+            
             link.setAttribute('href', url);
-            link.setAttribute('download', `cognitive_tasks_${selectedTaskNames}_${participantId}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute('download', `実行機能課題_${selectedTaskNames}_${participantId}_${dateString}_${timeString}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
@@ -983,12 +1281,12 @@
                 stimulusTimer = null;
             }
             
-            // メモリをクリア
-            allExperimentData = [];
+            // データをクリア
             currentTaskData = [];
             selectedTasks = [];
             currentTaskIndex = 0;
             isWaitingForResponse = false;
+            sessionId = '';
             
             // UI をリセット
             document.querySelectorAll('.task-card').forEach(card => {
@@ -1001,6 +1299,128 @@
             document.getElementById('setupScreen').classList.add('active');
         }
         
+        // 保存データの表示・管理
+        function toggleSavedDataView() {
+            const section = document.getElementById('savedDataSection');
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                refreshSavedData();
+            } else {
+                section.style.display = 'none';
+            }
+        }
+        
+        function refreshSavedData() {
+            const savedSessions = loadSavedData();
+            const listDiv = document.getElementById('savedDataList');
+            
+            if (savedSessions.length === 0) {
+                listDiv.innerHTML = '<p style="color: rgba(255,255,255,0.7); margin: 10px 0;">保存されたデータはありません</p>';
+                return;
+            }
+            
+            listDiv.innerHTML = savedSessions.map(session => `
+                <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.2);">
+                    <div style="font-weight: bold; margin-bottom: 5px;">参加者: ${session.participantId}</div>
+                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">
+                        実行課題: ${session.tasks.map(t => t.taskName).join(', ')}<br>
+                        完了日時: ${new Date(session.completedAt).toLocaleString()}<br>
+                        総試行数: ${session.totalTrials}
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn" style="padding: 8px 15px; font-size: 0.9rem; margin-right: 10px;" 
+                                onclick="downloadSessionData('${session.sessionId}')">📥 ダウンロード</button>
+                        <button class="btn" style="padding: 8px 15px; font-size: 0.9rem; background: linear-gradient(45deg, #FF6B6B, #FF8E53);" 
+                                onclick="deleteSavedDataConfirm('${session.sessionId}')">🗑️ 削除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function downloadSessionData(sessionId) {
+            try {
+                if (!window.savedTaskData) {
+                    alert('データが見つかりません');
+                    return;
+                }
+                
+                const sessionTasks = Object.keys(window.savedTaskData)
+                    .filter(key => window.savedTaskData[key].sessionId === sessionId)
+                    .map(key => window.savedTaskData[key]);
+                
+                if (sessionTasks.length === 0) {
+                    alert('セッションデータが見つかりません');
+                    return;
+                }
+                
+                const headers = [
+                    'sessionId', 'participantId', 'taskType', 'taskName', 'trial', 'stimulus', 'correctAnswer', 
+                    'response', 'accuracy', 'reactionTime', 'timestamp'
+                ];
+                
+                let csvContent = headers.join(',') + '\n';
+                
+                sessionTasks.forEach(taskSession => {
+                    taskSession.taskData.forEach(trial => {
+                        const row = headers.map(header => {
+                            let value = trial[header];
+                            
+                            if (header === 'taskName') {
+                                value = getTaskName(trial.taskType);
+                            }
+                            
+                            if (typeof value === 'object' && value !== null) {
+                                value = JSON.stringify(value);
+                            }
+                            if (typeof value === 'string' && value.includes(',')) {
+                                value = `"${value}"`;
+                            }
+                            return value;
+                        }).join(',');
+                        csvContent += row + '\n';
+                    });
+                });
+                
+                const firstTask = sessionTasks[0];
+                const taskNames = sessionTasks.map(t => getTaskName(t.taskType)).join('_');
+                const dateString = new Date(firstTask.completedAt).toISOString().split('T')[0];
+                const timeString = new Date(firstTask.completedAt).toTimeString().split(' ')[0].replace(/:/g, '');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                
+                link.setAttribute('href', url);
+                link.setAttribute('download', `実行機能課題_${taskNames}_${firstTask.participantId}_${dateString}_${timeString}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+            } catch (error) {
+                alert('ダウンロードエラー: ' + error.message);
+            }
+        }
+        
+        function deleteSavedDataConfirm(sessionId) {
+            if (confirm('このセッションのデータを削除しますか？\n削除されたデータは復元できません。')) {
+                deleteSavedSession(sessionId);
+                refreshSavedData();
+            }
+        }
+        
+        // ページ読み込み時に保存データ確認
+        window.addEventListener('load', function() {
+            try {
+                const savedSessions = loadSavedData();
+                if (savedSessions.length > 0) {
+                    console.log(`${savedSessions.length}件のセッションデータが見つかりました`);
+                }
+            } catch (error) {
+                console.log('保存データ確認エラー:', error);
+            }
+        });
+        
         // キーボード対応
         document.addEventListener('keydown', function(event) {
             if (!isWaitingForResponse) return;
@@ -1008,6 +1428,9 @@
             if (taskType === 'flanker') {
                 if (event.key === 'ArrowLeft') respond('left');
                 if (event.key === 'ArrowRight') respond('right');
+            } else if (taskType === 'stroop') {
+                if (event.key === 'y' || event.key === 'Y' || event.key === '1') respond(true);
+                if (event.key === 'n' || event.key === 'N' || event.key === '2') respond(false);
             } else if (taskType === 'shifting') {
                 if (event.key === '1') respond('red');
                 if (event.key === '2') respond('green');
