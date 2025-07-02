@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>実行機能課題セレクター</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .setup-screen {
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 40px;
+            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .task-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+
+        .task-card {
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 30px;
+            border: 3px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .task-card:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-5px);
+            border-color: rgba(255,255,255,0.4);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .task-card.selected {
+            background: linear-gradient(45deg, rgba(78,205,196,0.3), rgba(68,160,141,0.3));
+            border-color: #4ECDC4;
+            box-shadow: 0 0 20px rgba(78,205,196,0.3);
+        }
+
+        .task-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #4ECDC4;
+        }
+
+        .task-card p {
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .task-example {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-weight: bold;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .setting-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+
+        .task-screen {
+            min-height: 80vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .task-header {
+            background: rgba(255,255,255,0.25);
+            border-radius: 15px;
+            padding: 15px 30px;
+            margin-bottom: 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: 2px solid rgba(255,255,255,0.4);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .stimulus-area {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 30px auto;
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .stimulus {
+            font-size: 6rem;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .fixation {
+            font-size: 8rem;
+            color: #FFD700;
+        }
+
+        .stimulus-shape {
+            width: 120px;
+            height: 120px;
+            border: 4px solid rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .circle {
+            border-radius: 50%;
+        }
+
+        .square {
+            border-radius: 8px;
+        }
+
+        .red-shape {
+            background-color: #E74C3C;
+        }
+
+        .green-shape {
+            background-color: #2ECC71;
+        }
+
+        .response-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 40px;
+            justify-content: center;
+        }
+
+        .response-btn {
+            padding: 20px 35px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.25);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255,255,255,0.4);
+            min-width: 140px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .response-btn:hover {
+            background: rgba(255,255,255,0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        .response-btn:active {
+            transform: translateY(0px);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ECDC4, #44A08D);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .results-screen {
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 40px;
+            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .result-item {
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #A8E6CF, #88D8C0);
+        }
+
+        .instructions {
+            background: rgba(255,255,255,0.25);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            text-align: left;
+            line-height: 1.6;
+            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .selected-tasks {
+            background: rgba(78,205,196,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px solid #4ECDC4;
+            box-shadow: 0 4px 15px rgba(78,205,196,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .stimulus {
+                font-size: 4rem;
+            }
+            
+            .stimulus-shape {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .response-btn {
+                padding: 15px 20px;
+                font-size: 1.1rem;
+                min-width: 110px;
+            }
+            
+            .task-selection {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 実行機能課題セレクター</h1>
+        
+        <!-- セットアップ画面 -->
+        <div id="setupScreen" class="screen active setup-screen">
+            <div class="instructions">
+                <h3>📋 課題選択</h3>
+                <p>実行する課題を選択してください。複数選択も可能です。</p>
+                <p><strong>設定について:</strong></p>
+                <ul style="text-align: left; margin: 10px 0 10px 20px;">
+                    <li><strong>刺激提示時間:</strong> 各刺激が画面に表示される時間</li>
+                    <li><strong>刺激間間隔:</strong> 試行と試行の間の間隔時間</li>
+                </ul>
+            </div>
+            
+            <div class="task-selection">
+                <div class="task-card" data-task="flanker" onclick="toggleTask('flanker')">
+                    <h3>🎯 フランカー課題</h3>
+                    <p><strong>抑制機能の測定</strong></p>
+                    <p>中央の矢印の向きを判断します。周りの矢印は無視してください。</p>
+                    <div class="task-example">例: ←←→←← → 右向き</div>
+                </div>
+                
+                <div class="task-card" data-task="shifting" onclick="toggleTask('shifting')">
+                    <h3>🔄 シフティング課題</h3>
+                    <p><strong>認知的柔軟性の測定</strong></p>
+                    <p>指示に従って図形の色または形を判断します。</p>
+                    <div class="task-example">例: 赤い丸 → 色課題なら「赤」</div>
+                </div>
+                
+                <div class="task-card" data-task="nback" onclick="toggleTask('nback')">
+                    <h3>🧠 n-back課題</h3>
+                    <p><strong>ワーキングメモリの測定</strong></p>
+                    <p>2個前の数字と同じかどうかを判断します。</p>
+                    <div class="task-example">例: 7→3→7 → 3番目の7は一致</div>
+                </div>
+            </div>
+            
+            <div id="selectedTasks" class="selected-tasks" style="display: none;">
+                <h4>選択中の課題:</h4>
+                <div id="selectedTasksList"></div>
+            </div>
+            
+            <div class="setting-group">
+                <label for="participantId">参加者ID:</label>
+                <input type="text" id="participantId" value="P001" placeholder="参加者IDを入力">
+            </div>
+            
+            <div class="setting-group">
+                <label for="trialCount">試行数:</label>
+                <select id="trialCount">
+                    <option value="short">短縮版（各課題20-30試行）</option>
+                    <option value="standard" selected>標準版（各課題40-50試行）</option>
+                    <option value="long">長時間版（各課題60-80試行）</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="stimulusDuration">刺激提示時間:</label>
+                <select id="stimulusDuration">
+                    <option value="1000">1秒</option>
+                    <option value="2000">2秒</option>
+                    <option value="3000" selected>3秒</option>
+                    <option value="4000">4秒</option>
+                    <option value="5000">5秒</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="interStimulusInterval">刺激間間隔:</label>
+                <select id="interStimulusInterval">
+                    <option value="500">0.5秒</option>
+                    <option value="1000" selected>1秒</option>
+                    <option value="1500">1.5秒</option>
+                    <option value="2000">2秒</option>
+                    <option value="3000">3秒</option>
+                </select>
+            </div>
+            
+            <button id="startBtn" class="btn" onclick="startSelectedTasks()" disabled>🚀 選択した課題を開始</button>
+        </div>
+        
+        <!-- 課題画面 -->
+        <div id="taskScreen" class="screen task-screen">
+            <div id="taskHeader" class="task-header"></div>
+            
+            <div id="stimulusArea" class="stimulus-area">
+                <div id="stimulus"></div>
+            </div>
+            
+            <div id="responseArea" class="response-area"></div>
+            
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div id="progressText" class="progress-text"></div>
+        </div>
+        
+        <!-- 結果画面 -->
+        <div id="resultsScreen" class="screen results-screen">
+            <h2>📊 課題結果</h2>
+            <div id="resultsContent"></div>
+            <button class="btn" onclick="downloadCSV()">📥 CSVダウンロード</button>
+            <button class="btn btn-secondary" onclick="resetToSelection()">🔄 課題選択に戻る</button>
+        </div>
+    </div>
+
+    <script>
+        // グローバル変数
+        let selectedTasks = [];
+        let participantId = 'P001';
+        let currentTaskIndex = 0;
+        let allExperimentData = [];
+        let stimulusDuration = 3000;
+        let interStimulusInterval = 1000;
+        
+        // 現在の課題データ
+        let currentTaskData = [];
+        let currentTrial = 0;
+        let totalTrials = 0;
+        let isWaitingForResponse = false;
+        let stimulusStartTime = 0;
+        let taskType = '';
+        
+        // 課題固有データ
+        let stimulusHistory = []; // n-back用
+        let currentTask = 'color'; // shifting用
+        let previousTask = null; // shifting用
+        
+        // 課題設定
+        const taskConfigs = {
+            short: { flanker: 20, shifting: 30, nback: 25 },
+            standard: { flanker: 40, shifting: 50, nback: 40 },
+            long: { flanker: 60, shifting: 80, nback: 60 }
+        };
+        
+        function toggleTask(task) {
+            const taskCard = document.querySelector(`[data-task="${task}"]`);
+            
+            if (selectedTasks.includes(task)) {
+                // 選択解除
+                selectedTasks = selectedTasks.filter(t => t !== task);
+                taskCard.classList.remove('selected');
+            } else {
+                // 選択
+                selectedTasks.push(task);
+                taskCard.classList.add('selected');
+            }
+            
+            updateSelectedTasksDisplay();
+        }
+        
+        function updateSelectedTasksDisplay() {
+            const selectedDiv = document.getElementById('selectedTasks');
+            const listDiv = document.getElementById('selectedTasksList');
+            const startBtn = document.getElementById('startBtn');
+            
+            if (selectedTasks.length > 0) {
+                selectedDiv.style.display = 'block';
+                
+                const taskNames = {
+                    flanker: 'フランカー課題（抑制機能）',
+                    shifting: 'シフティング課題（認知的柔軟性）',
+                    nback: 'n-back課題（ワーキングメモリ）'
+                };
+                
+                listDiv.innerHTML = selectedTasks.map(task => 
+                    `<div>• ${taskNames[task]}</div>`
+                ).join('');
+                
+                startBtn.disabled = false;
+            } else {
+                selectedDiv.style.display = 'none';
+                startBtn.disabled = true;
+            }
+        }
+        
+        function startSelectedTasks() {
+            participantId = document.getElementById('participantId').value;
+            const trialLength = document.getElementById('trialCount').value;
+            stimulusDuration = parseInt(document.getElementById('stimulusDuration').value);
+            interStimulusInterval = parseInt(document.getElementById('interStimulusInterval').value);
+            
+            // データをリセット
+            allExperimentData = [];
+            currentTaskIndex = 0;
+            
+            // 最初の課題を開始
+            hideAllScreens();
+            startNextTask(taskConfigs[trialLength]);
+        }
+        
+        function startNextTask(config) {
+            if (currentTaskIndex >= selectedTasks.length) {
+                showResults();
+                return;
+            }
+            
+            const currentTaskType = selectedTasks[currentTaskIndex];
+            initializeTask(currentTaskType, config);
+        }
+        
+        function initializeTask(taskTypeParam, config) {
+            // メモリ効率のためデータをクリア
+            currentTaskData = [];
+            currentTrial = 0;
+            isWaitingForResponse = false;
+            stimulusHistory = [];
+            taskType = taskTypeParam;
+            
+            // 課題別設定
+            switch(taskType) {
+                case 'flanker':
+                    totalTrials = config.flanker;
+                    break;
+                case 'shifting':
+                    totalTrials = config.shifting;
+                    currentTask = Math.random() < 0.5 ? 'color' : 'shape';
+                    previousTask = null;
+                    break;
+                case 'nback':
+                    totalTrials = config.nback;
+                    break;
+            }
+            
+            setupTaskUI();
+            
+            hideAllScreens();
+            document.getElementById('taskScreen').classList.add('active');
+            
+            // 課題開始
+            setTimeout(() => {
+                nextTrial();
+            }, 1000);
+        }
+        
+        function setupTaskUI() {
+            const headers = {
+                flanker: 'フランカー課題：中央の矢印の向きを判断してください',
+                shifting: 'シフティング課題：指示に従って色または形を判断してください',
+                nback: '2-back課題：2個前と同じ数字が現れたら「一致」を選択してください'
+            };
+            
+            document.getElementById('taskHeader').textContent = headers[taskType];
+            
+            // レスポンスボタンを設定
+            const responseArea = document.getElementById('responseArea');
+            
+            if (taskType === 'flanker') {
+                responseArea.innerHTML = `
+                    <button class="response-btn" onclick="respond('left')">← 左</button>
+                    <button class="response-btn" onclick="respond('right')">右 →</button>
+                `;
+            } else if (taskType === 'shifting') {
+                responseArea.innerHTML = `
+                    <button class="response-btn" onclick="respond('red')">🔴 赤</button>
+                    <button class="response-btn" onclick="respond('green')">🟢 緑</button>
+                    <button class="response-btn" onclick="respond('circle')">⚪ 丸</button>
+                    <button class="response-btn" onclick="respond('square')">⬜ 四角</button>
+                `;
+            } else if (taskType === 'nback') {
+                responseArea.innerHTML = `
+                    <button class="response-btn" onclick="respond(true)">✓ 一致</button>
+                    <button class="response-btn" onclick="respond(false)">✗ 不一致</button>
+                `;
+            }
+        }
+        
+        function nextTrial() {
+            if (currentTrial >= totalTrials) {
+                // 現在の課題完了
+                allExperimentData.push(...currentTaskData);
+                currentTaskIndex++;
+                
+                // メモリ解放
+                currentTaskData = [];
+                
+                const config = taskConfigs[document.getElementById('trialCount').value];
+                startNextTask(config);
+                return;
+            }
+            
+            currentTrial++;
+            updateProgress();
+            
+            // 注視点表示
+            const stimulus = document.getElementById('stimulus');
+            stimulus.textContent = '+';
+            stimulus.className = 'fixation';
+            isWaitingForResponse = false;
+            
+            // 課題別の指示更新
+            if (taskType === 'shifting') {
+                updateShiftingInstruction();
+            }
+            
+            setTimeout(() => {
+                presentStimulus();
+            }, interStimulusInterval + Math.random() * 500);
+        }
+        
+        function presentStimulus() {
+            let stimulusValue, correctAnswer;
+            
+            if (taskType === 'flanker') {
+                const patterns = {
+                    congruent_left: '←←←←←',
+                    congruent_right: '→→→→→',
+                    incongruent_left: '→→←→→',
+                    incongruent_right: '←←→←←'
+                };
+                const conditions = Object.keys(patterns);
+                const condition = conditions[Math.floor(Math.random() * conditions.length)];
+                stimulusValue = patterns[condition];
+                correctAnswer = condition.includes('left') ? 'left' : 'right';
+                
+                document.getElementById('stimulus').textContent = stimulusValue;
+                document.getElementById('stimulus').className = 'stimulus';
+            } 
+            else if (taskType === 'shifting') {
+                const colors = ['red', 'green'];
+                const shapes = ['circle', 'square'];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const shape = shapes[Math.floor(Math.random() * shapes.length)];
+                
+                if (currentTask === 'color') {
+                    correctAnswer = color;
+                } else {
+                    correctAnswer = shape;
+                }
+                
+                const stimulus = document.getElementById('stimulus');
+                stimulus.className = `stimulus-shape ${shape} ${color}-shape`;
+                stimulus.textContent = '';
+                
+                stimulusValue = { color, shape };
+            }
+            else if (taskType === 'nback') {
+                const currentNumber = Math.floor(Math.random() * 10);
+                const isTarget = stimulusHistory.length >= 2 && 
+                               currentNumber === stimulusHistory[stimulusHistory.length - 2];
+                
+                document.getElementById('stimulus').textContent = currentNumber;
+                document.getElementById('stimulus').className = 'stimulus';
+                
+                stimulusValue = currentNumber;
+                correctAnswer = isTarget;
+                stimulusHistory.push(currentNumber);
+            }
+            
+            // 試行データを記録
+            const trialData = {
+                participantId: participantId,
+                taskType: taskType,
+                trial: currentTrial,
+                stimulus: stimulusValue,
+                correctAnswer: correctAnswer,
+                response: null,
+                accuracy: null,
+                reactionTime: null,
+                timestamp: new Date().toISOString()
+            };
+            
+            // 課題固有データ追加
+            if (taskType === 'shifting') {
+                trialData.currentTask = currentTask;
+                trialData.previousTask = previousTask;
+                trialData.trialType = previousTask !== null && previousTask !== currentTask ? 'switch' : 'repeat';
+            }
+            
+            currentTaskData.push(trialData);
+            
+            stimulusStartTime = performance.now();
+            isWaitingForResponse = true;
+            
+            // タイムアウト
+            setTimeout(() => {
+                if (isWaitingForResponse) {
+                    handleTimeout();
+                }
+            }, stimulusDuration);
+        }
+        
+        function updateShiftingInstruction() {
+            // タスク切り替えの決定
+            if (currentTrial > 1 && Math.random() < 0.33) {
+                previousTask = currentTask;
+                currentTask = currentTask === 'color' ? 'shape' : 'color';
+            } else {
+                previousTask = currentTask;
+            }
+            
+            const header = document.getElementById('taskHeader');
+            if (currentTask === 'color') {
+                header.textContent = 'シフティング課題：色について判断してください（赤か、緑か）';
+                header.style.background = 'linear-gradient(45deg, #FF6B6B, #FF8E53)';
+            } else {
+                header.textContent = 'シフティング課題：形について判断してください（丸か、四角か）';
+                header.style.background = 'linear-gradient(45deg, #4ECDC4, #44A08D)';
+            }
+        }
+        
+        function respond(response) {
+            if (!isWaitingForResponse) return;
+            
+            const reactionTime = performance.now() - stimulusStartTime;
+            const currentData = currentTaskData[currentTaskData.length - 1];
+            
+            currentData.response = response;
+            currentData.reactionTime = Math.round(reactionTime);
+            currentData.accuracy = (response === currentData.correctAnswer) ? 1 : 0;
+            
+            isWaitingForResponse = false;
+            
+            // 次の試行へ（フィードバックなし）
+            setTimeout(() => {
+                nextTrial();
+            }, Math.min(300, interStimulusInterval / 3));
+        }
+        
+        function handleTimeout() {
+            const currentData = currentTaskData[currentTaskData.length - 1];
+            currentData.response = null;
+            currentData.accuracy = 0;
+            currentData.reactionTime = stimulusDuration;
+            isWaitingForResponse = false;
+            
+            setTimeout(() => {
+                nextTrial();
+            }, Math.min(300, interStimulusInterval / 3));
+        }
+        
+        function updateProgress() {
+            const progressPercent = (currentTrial / totalTrials) * 100;
+            document.getElementById('progressFill').style.width = `${progressPercent}%`;
+            
+            const taskNames = {
+                flanker: 'フランカー',
+                shifting: 'シフティング',
+                nback: 'n-back'
+            };
+            
+            document.getElementById('progressText').textContent = 
+                `${taskNames[taskType]} 課題：${currentTrial} / ${totalTrials} (課題 ${currentTaskIndex + 1} / ${selectedTasks.length})`;
+        }
+        
+        function showResults() {
+            hideAllScreens();
+            document.getElementById('resultsScreen').classList.add('active');
+            
+            let resultsHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">';
+            
+            // 実行した課題の結果を表示
+            selectedTasks.forEach(task => {
+                const taskData = allExperimentData.filter(d => d.taskType === task);
+                const results = calculateResults(taskData, task);
+                
+                const taskNames = {
+                    flanker: '🎯 フランカー課題（抑制機能）',
+                    shifting: '🔄 シフティング課題（認知的柔軟性）',
+                    nback: '🧠 n-back課題（ワーキングメモリ）'
+                };
+                
+                resultsHTML += `
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px;">
+                        <h3>${taskNames[task]}</h3>
+                        <div class="result-item">正答率: ${results.accuracy}%</div>
+                        <div class="result-item">平均RT: ${results.meanRT}ms</div>
+                        <div class="result-item">試行数: ${results.validTrials}</div>
+                        ${results.specialMetric || ''}
+                    </div>
+                `;
+            });
+            
+            resultsHTML += '</div>';
+            
+            resultsHTML += `
+                <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 15px;">
+                    <h3>📈 実験情報</h3>
+                    <p>実行課題数: ${selectedTasks.length}</p>
+                    <p>総試行数: ${allExperimentData.length}</p>
+                    <p>参加者ID: ${participantId}</p>
+                    <p>完了時刻: ${new Date().toLocaleTimeString()}</p>
+                </div>
+            `;
+            
+            document.getElementById('resultsContent').innerHTML = resultsHTML;
+        }
+        
+        function calculateResults(data, taskType) {
+            if (!data.length) return { accuracy: 0, meanRT: 0, validTrials: 0 };
+            
+            const validTrials = data.filter(d => d.response !== null);
+            const correctTrials = data.filter(d => d.accuracy === 1);
+            
+            const accuracy = (correctTrials.length / data.length * 100).toFixed(1);
+            const meanRT = validTrials.length > 0 ? 
+                (validTrials.reduce((sum, d) => sum + d.reactionTime, 0) / validTrials.length).toFixed(0) : 0;
+            
+            let specialMetric = '';
+            
+            if (taskType === 'shifting') {
+                const switchTrials = data.filter(d => d.trialType === 'switch' && d.response !== null);
+                const repeatTrials = data.filter(d => d.trialType === 'repeat' && d.response !== null);
+                
+                if (switchTrials.length > 0 && repeatTrials.length > 0) {
+                    const switchRT = switchTrials.reduce((sum, d) => sum + d.reactionTime, 0) / switchTrials.length;
+                    const repeatRT = repeatTrials.reduce((sum, d) => sum + d.reactionTime, 0) / repeatTrials.length;
+                    const switchCost = (switchRT - repeatRT).toFixed(0);
+                    specialMetric = `<div class="result-item">切り替えコスト: ${switchCost}ms</div>`;
+                }
+            }
+            
+            return { accuracy, meanRT, validTrials: validTrials.length, specialMetric };
+        }
+        
+        function downloadCSV() {
+            const headers = [
+                'participantId', 'taskType', 'trial', 'stimulus', 'correctAnswer', 
+                'response', 'accuracy', 'reactionTime', 'timestamp'
+            ];
+            
+            let csvContent = headers.join(',') + '\n';
+            
+            allExperimentData.forEach(trial => {
+                const row = headers.map(header => {
+                    let value = trial[header];
+                    if (typeof value === 'object' && value !== null) {
+                        value = JSON.stringify(value);
+                    }
+                    if (typeof value === 'string' && value.includes(',')) {
+                        value = `"${value}"`;
+                    }
+                    return value;
+                }).join(',');
+                csvContent += row + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            const selectedTaskNames = selectedTasks.join('_');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `cognitive_tasks_${selectedTaskNames}_${participantId}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        function hideAllScreens() {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+        }
+        
+        function resetToSelection() {
+            // メモリをクリア
+            allExperimentData = [];
+            currentTaskData = [];
+            selectedTasks = [];
+            currentTaskIndex = 0;
+            
+            // UI をリセット
+            document.querySelectorAll('.task-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            updateSelectedTasksDisplay();
+            
+            hideAllScreens();
+            document.getElementById('setupScreen').classList.add('active');
+        }
+        
+        // キーボード対応
+        document.addEventListener('keydown', function(event) {
+            if (!isWaitingForResponse) return;
+            
+            if (taskType === 'flanker') {
+                if (event.key === 'ArrowLeft') respond('left');
+                if (event.key === 'ArrowRight') respond('right');
+            } else if (taskType === 'shifting') {
+                if (event.key === '1') respond('red');
+                if (event.key === '2') respond('green');
+                if (event.key === '3') respond('circle');
+                if (event.key === '4') respond('square');
+            } else if (taskType === 'nback') {
+                if (event.key === 'y' || event.key === 'Y') respond(true);
+                if (event.key === 'n' || event.key === 'N') respond(false);
+            }
+        });
+    </script>
+</body>
+</html>
