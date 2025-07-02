@@ -70,9 +70,9 @@
 
         .task-card:hover {
             background: rgba(255,255,255,0.25);
-            transform: translateY(-5px);
-            border-color: rgba(255,255,255,0.4);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            transform: translateY(-3px);
+            border-color: #4ECDC4;
+            box-shadow: 0 8px 25px rgba(78,205,196,0.3);
         }
 
         .task-card.selected {
@@ -97,9 +97,11 @@
             border-radius: 10px;
             padding: 15px;
             margin-top: 15px;
-            font-family: monospace;
-            font-weight: bold;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: normal;
             border: 1px solid rgba(255,255,255,0.3);
+            line-height: 1.5;
+            text-align: left;
         }
 
         .setting-group {
@@ -371,55 +373,106 @@
         <!-- セットアップ画面 -->
         <div id="setupScreen" class="screen active setup-screen">
             <div class="instructions">
-                <h3>📋 課題選択</h3>
-                <p>実行する課題を選択してください。複数選択も可能です。</p>
+                <h3>📋 実行機能課題アプリ</h3>
+                <p>実行したい課題をクリックして選択してください。課題は一つずつ実行されます。</p>
                 <p><strong>設定について:</strong></p>
                 <ul style="text-align: left; margin: 10px 0 10px 20px;">
                     <li><strong>刺激提示時間:</strong> 各刺激が画面に表示される時間</li>
                     <li><strong>刺激間間隔:</strong> 試行と試行の間の間隔時間</li>
-                    <li><strong>データ管理:</strong> 各課題完了時にCSVファイルが自動ダウンロードされます</li>
+                    <li><strong>データ管理:</strong> 課題完了時にCSVファイルが自動ダウンロードされます</li>
                 </ul>
+                <p style="color: #4ECDC4; font-weight: bold; margin-top: 15px;">
+                    💡 各課題の詳しい例と説明は下記のカードに記載されています
+                </p>
             </div>
             
             <div class="task-selection">
-                <div class="task-card" data-task="flanker" onclick="toggleTask('flanker')">
+                <div class="task-card" data-task="flanker" onclick="selectTask('flanker')">
                     <h3>🎯 フランカー課題</h3>
                     <p><strong>抑制機能の測定</strong></p>
                     <p>中央の矢印の向きを判断します。周りの矢印は無視してください。</p>
-                    <div class="task-example">例: ←←→←← → 右向き</div>
-                </div>
-                
-                <div class="task-card" data-task="stroop" onclick="toggleTask('stroop')">
-                    <h3>🌈 ストループ課題</h3>
-                    <p><strong>抑制機能の測定</strong></p>
-                    <p>上段のフォントカラーと下段の色名単語の意味が一致しているかを判断します。</p>
-                    <div class="task-example">例: <span style="color: red;">XXXX</span><br>みどり → 不一致</div>
-                    <div style="font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 8px;">
-                        ※一致・不一致の割合は50%ずつに調整されています
+                    <div class="task-example">
+                        <div style="margin: 10px 0;">
+                            <strong>一致条件の例:</strong><br>
+                            ←←←←← → 「左」を選択<br>
+                            →→→→→ → 「右」を選択
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <strong>不一致条件の例:</strong><br>
+                            →→←→→ → 中央は「左」なので「左」を選択<br>
+                            ←←→←← → 中央は「右」なので「右」を選択
+                        </div>
+                        <div style="color: #4ECDC4; font-size: 0.9rem;">
+                            周りの矢印は無視して、中央だけに注目！
+                        </div>
                     </div>
                 </div>
                 
-                <div class="task-card" data-task="shifting" onclick="toggleTask('shifting')">
+                <div class="task-card" data-task="stroop" onclick="selectTask('stroop')">
+                    <h3>🌈 ストループ課題</h3>
+                    <p><strong>抑制機能の測定</strong></p>
+                    <p>上段のフォントカラーと下段の色名単語の意味が一致しているかを判断します。</p>
+                    <div class="task-example">
+                        <div style="margin: 10px 0;">
+                            <strong>一致条件の例:</strong><br>
+                            <span style="color: red; background: rgba(255,255,255,0.8); padding: 2px 8px; border-radius: 4px; color: red;">XXXX</span><br>
+                            あか → 「一致」を選択
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <strong>不一致条件の例:</strong><br>
+                            <span style="background: rgba(255,255,255,0.8); padding: 2px 8px; border-radius: 4px; color: blue;">XXXX</span><br>
+                            あか → 「不一致」を選択
+                        </div>
+                        <div style="color: #4ECDC4; font-size: 0.9rem;">
+                            文字の意味は無視して、フォントの色に注目！
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="task-card" data-task="shifting" onclick="selectTask('shifting')">
                     <h3>🔄 シフティング課題</h3>
                     <p><strong>認知的柔軟性の測定</strong></p>
                     <p>指示に従って図形の色または形を判断します。</p>
-                    <div class="task-example">例: 赤い丸 → 色課題なら「赤」</div>
+                    <div class="task-example">
+                        <div style="margin: 10px 0;">
+                            <strong>色課題の例:</strong><br>
+                            🔴 赤い丸 → 「赤」を選択<br>
+                            🟢 緑の四角 → 「緑」を選択
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <strong>形課題の例:</strong><br>
+                            🔴 赤い丸 → 「丸」を選択<br>
+                            🟢 緑の四角 → 「四角」を選択
+                        </div>
+                        <div style="color: #4ECDC4; font-size: 0.9rem;">
+                            指示に応じて色か形のどちらかに注目！
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="task-card" data-task="nback" onclick="toggleTask('nback')">
+                <div class="task-card" data-task="nback" onclick="selectTask('nback')">
                     <h3>🧠 n-back課題</h3>
                     <p><strong>ワーキングメモリの測定</strong></p>
                     <p>2個前の数字と同じかどうかを判断します。</p>
-                    <div class="task-example">例: 7→3→7 → 3番目の7は一致</div>
-                    <div style="font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 8px;">
-                        ※ターゲット・非ターゲットの割合は50%ずつに調整されています
+                    <div class="task-example">
+                        <div style="margin: 10px 0;">
+                            <strong>一致条件の例:</strong><br>
+                            7 → 3 → 7 → 3番目の「7」は2個前と同じなので「一致」
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <strong>不一致条件の例:</strong><br>
+                            7 → 3 → 5 → 3番目の「5」は2個前(7)と違うので「不一致」
+                        </div>
+                        <div style="color: #4ECDC4; font-size: 0.9rem;">
+                            常に2個前の数字を覚えておくことが重要！
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <div id="selectedTasks" class="selected-tasks" style="display: none;">
+            <div id="selectedTask" class="selected-tasks" style="display: none;">
                 <h4>選択中の課題:</h4>
-                <div id="selectedTasksList"></div>
+                <div id="selectedTaskName"></div>
             </div>
             
             <div class="setting-group">
@@ -458,7 +511,7 @@
                 </select>
             </div>
             
-            <button id="startBtn" class="btn" onclick="startSelectedTasks()" disabled>🚀 選択した課題を開始</button>
+            <button id="startBtn" class="btn" onclick="startSelectedTask()" disabled>🚀 選択した課題を開始</button>
         </div>
         
         <!-- 課題画面 -->
@@ -479,15 +532,15 @@
         
         <!-- 結果画面 -->
         <div id="resultsScreen" class="screen results-screen">
-            <h2>📊 全課題完了</h2>
+            <h2>📊 課題完了</h2>
             <div id="resultsContent"></div>
-            <button class="btn btn-secondary" onclick="resetToSelection()">🔄 課題選択に戻る</button>
+            <button class="btn" onclick="resetToSelection()">🔄 別の課題を選択</button>
         </div>
     </div>
 
     <script>
         // グローバル変数
-        let selectedTasks = [];
+        let selectedTask = null; // 単一課題選択用
         let participantId = 'P001';
         let currentTaskIndex = 0;
         let sessionId = '';
@@ -631,41 +684,36 @@
             long: { flanker: 60, stroop: 40, shifting: 80, nback: 60 }
         };
         
-        function toggleTask(task) {
+        function selectTask(task) {
+            // 前の選択をクリア
+            document.querySelectorAll('.task-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // 新しい課題を選択
+            selectedTask = task;
             const taskCard = document.querySelector(`[data-task="${task}"]`);
+            taskCard.classList.add('selected');
             
-            if (selectedTasks.includes(task)) {
-                // 選択解除
-                selectedTasks = selectedTasks.filter(t => t !== task);
-                taskCard.classList.remove('selected');
-            } else {
-                // 選択
-                selectedTasks.push(task);
-                taskCard.classList.add('selected');
-            }
-            
-            updateSelectedTasksDisplay();
+            updateSelectedTaskDisplay();
         }
         
-        function updateSelectedTasksDisplay() {
-            const selectedDiv = document.getElementById('selectedTasks');
-            const listDiv = document.getElementById('selectedTasksList');
+        function updateSelectedTaskDisplay() {
+            const selectedDiv = document.getElementById('selectedTask');
+            const nameDiv = document.getElementById('selectedTaskName');
             const startBtn = document.getElementById('startBtn');
             
-            if (selectedTasks.length > 0) {
+            if (selectedTask) {
                 selectedDiv.style.display = 'block';
                 
                 const taskNames = {
-                    flanker: 'フランカー課題（抑制機能）',
-                    stroop: 'ストループ課題（抑制機能）',
-                    shifting: 'シフティング課題（認知的柔軟性）',
-                    nback: 'n-back課題（ワーキングメモリ）'
+                    flanker: '🎯 フランカー課題（抑制機能）',
+                    stroop: '🌈 ストループ課題（抑制機能）',
+                    shifting: '🔄 シフティング課題（認知的柔軟性）',
+                    nback: '🧠 n-back課題（ワーキングメモリ）'
                 };
                 
-                listDiv.innerHTML = selectedTasks.map(task => 
-                    `<div>• ${taskNames[task]}</div>`
-                ).join('');
-                
+                nameDiv.innerHTML = `<div>• ${taskNames[selectedTask]}</div>`;
                 startBtn.disabled = false;
             } else {
                 selectedDiv.style.display = 'none';
@@ -673,31 +721,43 @@
             }
         }
         
-        function startSelectedTasks() {
+        function startSelectedTask() {
+            if (!selectedTask) {
+                alert('課題を選択してください');
+                return;
+            }
+            
+            // 参加者IDを取得
             participantId = document.getElementById('participantId').value;
+            
+            if (!participantId.trim()) {
+                alert('参加者IDを入力してください');
+                return;
+            }
+            
+            // 設定値を取得
             const trialLength = document.getElementById('trialCount').value;
             stimulusDuration = parseInt(document.getElementById('stimulusDuration').value);
             interStimulusInterval = parseInt(document.getElementById('interStimulusInterval').value);
             
-            // セッション初期化
+            // セッション初期化（単一課題用）
             initializeSession();
             
-            // データをリセット
+            // 選択された課題を開始
             currentTaskIndex = 0;
             
-            // 最初の課題を開始
             hideAllScreens();
             startNextTask(taskConfigs[trialLength]);
         }
         
         function startNextTask(config) {
-            if (currentTaskIndex >= selectedTasks.length) {
-                // 全課題完了
+            // 単一課題なので、課題完了時は結果画面へ
+            if (currentTaskIndex >= 1) { // selectedTaskは単一なので1つ
                 showResults();
                 return;
             }
             
-            const currentTaskType = selectedTasks[currentTaskIndex];
+            const currentTaskType = selectedTask;
             initializeTask(currentTaskType, config);
         }
         
@@ -786,10 +846,8 @@
         
         function nextTrial() {
             if (currentTrial >= totalTrials) {
-                // 現在の課題完了 - 自動ダウンロードしてメモリ解放
+                // 課題完了 - 自動ダウンロードしてメモリ解放
                 autoDownloadTaskData(taskType, currentTaskData);
-                
-                currentTaskIndex++;
                 
                 // タイマーをクリア
                 if (stimulusTimer) {
@@ -800,11 +858,9 @@
                 // メモリ効率のため現在の課題データをクリア
                 currentTaskData = [];
                 
-                const config = taskConfigs[document.getElementById('trialCount').value];
-                
-                // 少し間隔を置いて次の課題へ
+                // 単一課題なので結果画面へ
                 setTimeout(() => {
-                    startNextTask(config);
+                    showResults();
                 }, 1500);
                 return;
             }
@@ -1099,22 +1155,18 @@
             };
             
             document.getElementById('progressText').textContent = 
-                `${taskNames[taskType]} 課題：${currentTrial} / ${totalTrials} (課題 ${currentTaskIndex + 1} / ${selectedTasks.length})`;
+                `${taskNames[taskType]} 課題：${currentTrial} / ${totalTrials}`;
         }
         
         function showResults() {
             hideAllScreens();
             document.getElementById('resultsScreen').classList.add('active');
             
-            let resultsHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">';
-            
-            let totalTrials = 0;
-            let totalValidTrials = 0;
+            let resultsHTML = '<div style="max-width: 500px; margin: 0 auto;">';
             
             // 完了した課題の結果を表示
-            completedTasksInfo.forEach(taskInfo => {
-                totalTrials += taskInfo.trialCount;
-                totalValidTrials += taskInfo.validTrials;
+            if (completedTasksInfo.length > 0) {
+                const taskInfo = completedTasksInfo[0]; // 単一課題
                 
                 const taskNames = {
                     flanker: '🎯 フランカー課題（抑制機能）',
@@ -1124,44 +1176,41 @@
                 };
                 
                 resultsHTML += `
-                    <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px;">
-                        <h3>${taskNames[taskInfo.taskType]}</h3>
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 30px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 20px; text-align: center;">${taskNames[taskInfo.taskType]}</h3>
                         <div class="result-item">正答率: ${taskInfo.accuracy}%</div>
-                        <div class="result-item">平均RT: ${taskInfo.meanRT}ms</div>
+                        <div class="result-item">平均反応時間: ${taskInfo.meanRT}ms</div>
                         <div class="result-item">有効試行: ${taskInfo.validTrials} / ${taskInfo.trialCount}</div>
                         <div class="result-item">タイムアウト: ${taskInfo.timeoutTrials}試行</div>
                         ${taskInfo.specialMetric || ''}
-                        <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-top: 10px;">
-                            ✅ データダウンロード済み
+                        <div style="background: rgba(78,205,196,0.2); border-radius: 10px; padding: 15px; margin-top: 15px; border: 1px solid #4ECDC4; text-align: center;">
+                            <p style="font-weight: bold; color: #4ECDC4; margin-bottom: 5px;">✅ データダウンロード完了</p>
+                            <p style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">
+                                CSVファイルがダウンロードフォルダに保存されました
+                            </p>
                         </div>
                     </div>
                 `;
-            });
-            
-            resultsHTML += '</div>';
+            }
             
             resultsHTML += `
-                <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 15px;">
-                    <h3>📈 セッション完了</h3>
-                    <p>セッションID: ${sessionId}</p>
-                    <p>実行課題数: ${selectedTasks.length}</p>
-                    <p>総試行数: ${totalTrials}</p>
-                    <p>有効試行数: ${totalValidTrials}</p>
-                    <p>タイムアウト試行数: ${totalTrials - totalValidTrials}</p>
+                <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px;">
+                    <h3>📈 実験情報</h3>
                     <p>参加者ID: ${participantId}</p>
-                    <p>完了時刻: ${new Date().toLocaleTimeString()}</p>
+                    <p>セッションID: ${sessionId}</p>
+                    <p>完了時刻: ${new Date().toLocaleString()}</p>
                     <div style="background: rgba(78,205,196,0.2); border-radius: 10px; padding: 15px; margin-top: 15px; border: 1px solid #4ECDC4;">
-                        <p style="font-weight: bold; color: #4ECDC4;">💾 データ管理について</p>
+                        <p style="font-weight: bold; color: #4ECDC4;">💾 データについて</p>
                         <p style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-top: 5px;">
-                            • 各課題のデータは完了時に自動ダウンロードされました<br>
-                            • ダウンロードフォルダをご確認ください<br>
-                            • データはメモリ効率のため端末には保存されていません<br>
-                            • 出題割合：各課題とも条件バランスが50%ずつに調整済み
+                            • 実験データは自動的にCSVファイルでダウンロードされました<br>
+                            • 出題条件は50%ずつのバランスに調整されています<br>
+                            • メモリ効率のため、データは端末には保存されていません
                         </p>
                     </div>
                 </div>
             `;
             
+            resultsHTML += '</div>';
             document.getElementById('resultsContent').innerHTML = resultsHTML;
         }
         
@@ -1231,10 +1280,13 @@
                 stimulusTimer = null;
             }
             
+            // 刺激提示エリアをリセット
+            resetStimulusArea();
+            
             // データをクリア
             currentTaskData = [];
             completedTasksInfo = [];
-            selectedTasks = [];
+            selectedTask = null;
             currentTaskIndex = 0;
             isWaitingForResponse = false;
             sessionId = '';
@@ -1244,11 +1296,26 @@
                 card.classList.remove('selected');
             });
             
-            updateSelectedTasksDisplay();
+            updateSelectedTaskDisplay();
             
             hideAllScreens();
             document.getElementById('setupScreen').classList.add('active');
         }
+        
+        function resetStimulusArea() {
+            const stimulus = document.getElementById('stimulus');
+            stimulus.textContent = '';
+            stimulus.className = '';
+            stimulus.innerHTML = '';
+        }
+        
+        // ページ読み込み時の初期化
+        window.addEventListener('load', function() {
+            // 初期化
+            selectedTask = null;
+            updateSelectedTaskDisplay();
+            resetStimulusArea();
+        });
         
         // キーボード対応
         document.addEventListener('keydown', function(event) {
