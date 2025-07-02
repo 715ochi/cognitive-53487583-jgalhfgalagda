@@ -1005,8 +1005,8 @@
                 let isTarget;
                 
                 if (stimulusHistory.length >= 2) {
-                    // 50%の確率でターゲット（一致）条件を決定
-                    isTarget = Math.random() < 0.5;
+                    // 30%の確率でターゲット（一致）条件を決定
+                    isTarget = Math.random() < 0.3;
                     
                     if (isTarget) {
                         // ターゲット条件：2個前と同じ数字
@@ -1183,12 +1183,6 @@
                         <div class="result-item">有効試行: ${taskInfo.validTrials} / ${taskInfo.trialCount}</div>
                         <div class="result-item">タイムアウト: ${taskInfo.timeoutTrials}試行</div>
                         ${taskInfo.specialMetric || ''}
-                        <div style="background: rgba(78,205,196,0.2); border-radius: 10px; padding: 15px; margin-top: 15px; border: 1px solid #4ECDC4; text-align: center;">
-                            <p style="font-weight: bold; color: #4ECDC4; margin-bottom: 5px;">✅ データダウンロード完了</p>
-                            <p style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">
-                                CSVファイルがダウンロードフォルダに保存されました
-                            </p>
-                        </div>
                     </div>
                 `;
             }
@@ -1239,14 +1233,14 @@
                 const mismatchTrials = validTrials.filter(d => d.correctAnswer === false);
                 const matchPercentage = validTrials.length > 0 ? (matchTrials.length / validTrials.length * 100).toFixed(1) : 0;
                 const mismatchPercentage = validTrials.length > 0 ? (mismatchTrials.length / validTrials.length * 100).toFixed(1) : 0;
-                specialMetric = `<div class="result-item">一致条件: ${matchPercentage}% (${matchTrials.length}試行)</div><div class="result-item">不一致条件: ${mismatchPercentage}% (${mismatchTrials.length}試行)</div>`;
+                specialMetric = `<div class="result-item">一致条件: ${matchTrials.length}試行</div><div class="result-item">不一致条件: ${mismatchTrials.length}試行</div>`;
             } else if (taskType === 'nback') {
                 // n-back課題のターゲット・非ターゲット割合を表示
                 const targetTrials = validTrials.filter(d => d.correctAnswer === true);
                 const nonTargetTrials = validTrials.filter(d => d.correctAnswer === false);
                 const targetPercentage = validTrials.length > 0 ? (targetTrials.length / validTrials.length * 100).toFixed(1) : 0;
                 const nonTargetPercentage = validTrials.length > 0 ? (nonTargetTrials.length / validTrials.length * 100).toFixed(1) : 0;
-                specialMetric = `<div class="result-item">ターゲット条件: ${targetPercentage}% (${targetTrials.length}試行)</div><div class="result-item">非ターゲット条件: ${nonTargetPercentage}% (${nonTargetTrials.length}試行)</div>`;
+                specialMetric = `<div class="result-item">ターゲット条件: ${targetTrials.length}試行</div><div class="result-item">非ターゲット条件: ${nonTargetTrials.length}試行</div>`;
             }
             
             return { 
