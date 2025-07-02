@@ -472,6 +472,7 @@
         let isWaitingForResponse = false;
         let stimulusStartTime = 0;
         let taskType = '';
+        let stimulusTimer = null; // タイマー管理用
         
         // 課題固有データ
         let stimulusHistory = []; // n-back用
@@ -552,6 +553,12 @@
         }
         
         function initializeTask(taskTypeParam, config) {
+            // タイマーをクリア
+            if (stimulusTimer) {
+                clearTimeout(stimulusTimer);
+                stimulusTimer = null;
+            }
+            
             // メモリ効率のためデータをクリア
             currentTaskData = [];
             currentTrial = 0;
@@ -580,8 +587,10 @@
             document.getElementById('taskScreen').classList.add('active');
             
             // 課題開始
-            setTimeout(() => {
-                nextTrial();
+            stimulusTimer = setTimeout(() => {
+                if (stimulusTimer) {
+                    nextTrial();
+                }
             }, 1000);
         }
         
@@ -623,6 +632,12 @@
                 allExperimentData.push(...currentTaskData);
                 currentTaskIndex++;
                 
+                // タイマーをクリア
+                if (stimulusTimer) {
+                    clearTimeout(stimulusTimer);
+                    stimulusTimer = null;
+                }
+                
                 // メモリ解放
                 currentTaskData = [];
                 
@@ -633,6 +648,12 @@
             
             currentTrial++;
             updateProgress();
+            
+            // 既存のタイマーをクリア
+            if (stimulusTimer) {
+                clearTimeout(stimulusTimer);
+                stimulusTimer = null;
+            }
             
             // 注視点表示
             const stimulus = document.getElementById('stimulus');
@@ -645,12 +666,21 @@
                 updateShiftingInstruction();
             }
             
-            setTimeout(() => {
-                presentStimulus();
+            // 刺激間間隔後に刺激提示
+            stimulusTimer = setTimeout(() => {
+                if (stimulusTimer) { // タイマーが有効かチェック
+                    presentStimulus();
+                }
             }, interStimulusInterval + Math.random() * 500);
         }
         
         function presentStimulus() {
+            // 既存のタイマーをクリア
+            if (stimulusTimer) {
+                clearTimeout(stimulusTimer);
+                stimulusTimer = null;
+            }
+            
             let stimulusValue, correctAnswer;
             
             if (taskType === 'flanker') {
@@ -721,20 +751,21 @@
             
             currentTaskData.push(trialData);
             
+            // 反応受付開始
             stimulusStartTime = performance.now();
             isWaitingForResponse = true;
             
-            // タイムアウト
-            setTimeout(() => {
-                if (isWaitingForResponse) {
+            // 刺激提示時間のタイマー設定
+            stimulusTimer = setTimeout(() => {
+                if (isWaitingForResponse && stimulusTimer) { // 二重チェック
                     handleTimeout();
                 }
             }, stimulusDuration);
         }
         
         function updateShiftingInstruction() {
-            // タスク切り替えの決定
-            if (currentTrial > 1 && Math.random() < 0.33) {
+            // タスク切り替えの決定（50%の確率で切り替え）
+            if (currentTrial > 1 && Math.random() < 0.5) {
                 previousTask = currentTask;
                 currentTask = currentTask === 'color' ? 'shape' : 'color';
             } else {
@@ -754,6 +785,12 @@
         function respond(response) {
             if (!isWaitingForResponse) return;
             
+            // タイマーをクリア
+            if (stimulusTimer) {
+                clearTimeout(stimulusTimer);
+                stimulusTimer = null;
+            }
+            
             const reactionTime = performance.now() - stimulusStartTime;
             const currentData = currentTaskData[currentTaskData.length - 1];
             
@@ -763,22 +800,37 @@
             
             isWaitingForResponse = false;
             
-            // 次の試行へ（フィードバックなし）
-            setTimeout(() => {
-                nextTrial();
-            }, Math.min(300, interStimulusInterval / 3));
+            // 次の試行への間隔
+            const nextTrialDelay = Math.min(300, interStimulusInterval / 3);
+            stimulusTimer = setTimeout(() => {
+                if (stimulusTimer) { // タイマーが有効かチェック
+                    nextTrial();
+                }
+            }, nextTrialDelay);
         }
         
         function handleTimeout() {
+            if (!isWaitingForResponse) return; // 既に処理済みの場合は無視
+            
+            // タイマーをクリア
+            if (stimulusTimer) {
+                clearTimeout(stimulusTimer);
+                stimulusTimer = null;
+            }
+            
             const currentData = currentTaskData[currentTaskData.length - 1];
             currentData.response = null;
             currentData.accuracy = 0;
             currentData.reactionTime = stimulusDuration;
             isWaitingForResponse = false;
             
-            setTimeout(() => {
-                nextTrial();
-            }, Math.min(300, interStimulusInterval / 3));
+            // 次の試行への間隔
+            const nextTrialDelay = Math.min(300, interStimulusInterval / 3);
+            stimulusTimer = setTimeout(() => {
+                if (stimulusTimer) { // タイマーが有効かチェック
+                    nextTrial();
+                }
+            }, nextTrialDelay);
         }
         
         function updateProgress() {
@@ -817,7 +869,8 @@
                         <h3>${taskNames[task]}</h3>
                         <div class="result-item">正答率: ${results.accuracy}%</div>
                         <div class="result-item">平均RT: ${results.meanRT}ms</div>
-                        <div class="result-item">試行数: ${results.validTrials}</div>
+                        <div class="result-item">有効試行: ${results.validTrials} / ${results.totalTrials}</div>
+                        <div class="result-item">タイムアウト: ${results.timeoutTrials}試行</div>
                         ${results.specialMetric || ''}
                     </div>
                 `;
@@ -830,8 +883,13 @@
                     <h3>📈 実験情報</h3>
                     <p>実行課題数: ${selectedTasks.length}</p>
                     <p>総試行数: ${allExperimentData.length}</p>
+                    <p>有効試行数: ${allExperimentData.filter(d => d.response !== null).length}</p>
+                    <p>タイムアウト試行数: ${allExperimentData.filter(d => d.response === null).length}</p>
                     <p>参加者ID: ${participantId}</p>
                     <p>完了時刻: ${new Date().toLocaleTimeString()}</p>
+                    <p style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-top: 10px;">
+                        ※正答率はタイムアウト試行を除外して計算しています
+                    </p>
                 </div>
             `;
             
@@ -841,28 +899,40 @@
         function calculateResults(data, taskType) {
             if (!data.length) return { accuracy: 0, meanRT: 0, validTrials: 0 };
             
+            // 有効試行（反応があった試行）と正答試行を分離
             const validTrials = data.filter(d => d.response !== null);
-            const correctTrials = data.filter(d => d.accuracy === 1);
+            const correctTrials = validTrials.filter(d => d.accuracy === 1);
             
-            const accuracy = (correctTrials.length / data.length * 100).toFixed(1);
+            // 正答率：有効試行に対する正答の割合（タイムアウト試行は除外）
+            const accuracy = validTrials.length > 0 ? 
+                (correctTrials.length / validTrials.length * 100).toFixed(1) : 0;
+            
+            // 平均反応時間：有効試行のみから計算
             const meanRT = validTrials.length > 0 ? 
                 (validTrials.reduce((sum, d) => sum + d.reactionTime, 0) / validTrials.length).toFixed(0) : 0;
             
             let specialMetric = '';
             
             if (taskType === 'shifting') {
-                const switchTrials = data.filter(d => d.trialType === 'switch' && d.response !== null);
-                const repeatTrials = data.filter(d => d.trialType === 'repeat' && d.response !== null);
+                const validSwitchTrials = validTrials.filter(d => d.trialType === 'switch');
+                const validRepeatTrials = validTrials.filter(d => d.trialType === 'repeat');
                 
-                if (switchTrials.length > 0 && repeatTrials.length > 0) {
-                    const switchRT = switchTrials.reduce((sum, d) => sum + d.reactionTime, 0) / switchTrials.length;
-                    const repeatRT = repeatTrials.reduce((sum, d) => sum + d.reactionTime, 0) / repeatTrials.length;
+                if (validSwitchTrials.length > 0 && validRepeatTrials.length > 0) {
+                    const switchRT = validSwitchTrials.reduce((sum, d) => sum + d.reactionTime, 0) / validSwitchTrials.length;
+                    const repeatRT = validRepeatTrials.reduce((sum, d) => sum + d.reactionTime, 0) / validRepeatTrials.length;
                     const switchCost = (switchRT - repeatRT).toFixed(0);
                     specialMetric = `<div class="result-item">切り替えコスト: ${switchCost}ms</div>`;
                 }
             }
             
-            return { accuracy, meanRT, validTrials: validTrials.length, specialMetric };
+            return { 
+                accuracy, 
+                meanRT, 
+                validTrials: validTrials.length, 
+                totalTrials: data.length,
+                timeoutTrials: data.length - validTrials.length,
+                specialMetric 
+            };
         }
         
         function downloadCSV() {
@@ -907,11 +977,18 @@
         }
         
         function resetToSelection() {
+            // タイマーをクリア
+            if (stimulusTimer) {
+                clearTimeout(stimulusTimer);
+                stimulusTimer = null;
+            }
+            
             // メモリをクリア
             allExperimentData = [];
             currentTaskData = [];
             selectedTasks = [];
             currentTaskIndex = 0;
+            isWaitingForResponse = false;
             
             // UI をリセット
             document.querySelectorAll('.task-card').forEach(card => {
