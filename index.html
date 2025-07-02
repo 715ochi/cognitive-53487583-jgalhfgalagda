@@ -1112,8 +1112,8 @@
             
             isWaitingForResponse = false;
             
-            // 次の試行への間隔
-            const nextTrialDelay = Math.min(300, interStimulusInterval / 3);
+            // 次の試行への間隔（短縮して応答性を改善）
+            const nextTrialDelay = 150; // 固定値で短縮
             stimulusTimer = setTimeout(() => {
                 if (stimulusTimer) { // タイマーが有効かチェック
                     nextTrial();
@@ -1136,8 +1136,8 @@
             currentData.reactionTime = stimulusDuration;
             isWaitingForResponse = false;
             
-            // 次の試行への間隔
-            const nextTrialDelay = Math.min(300, interStimulusInterval / 3);
+            // 次の試行への間隔（短縮して応答性を改善）
+            const nextTrialDelay = 150; // 固定値で短縮
             stimulusTimer = setTimeout(() => {
                 if (stimulusTimer) { // タイマーが有効かチェック
                     nextTrial();
