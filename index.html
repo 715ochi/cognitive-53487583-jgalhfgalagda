@@ -411,6 +411,9 @@
                     <p><strong>ワーキングメモリの測定</strong></p>
                     <p>2個前の数字と同じかどうかを判断します。</p>
                     <div class="task-example">例: 7→3→7 → 3番目の7は一致</div>
+                    <div style="font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 8px;">
+                        ※ターゲット・非ターゲットの割合は50%ずつに調整されています
+                    </div>
                 </div>
             </div>
             
@@ -942,9 +945,27 @@
                 stimulusValue = { color, shape };
             }
             else if (taskType === 'nback') {
-                const currentNumber = Math.floor(Math.random() * 10);
-                const isTarget = stimulusHistory.length >= 2 && 
-                               currentNumber === stimulusHistory[stimulusHistory.length - 2];
+                let currentNumber;
+                let isTarget;
+                
+                if (stimulusHistory.length >= 2) {
+                    // 50%の確率でターゲット（一致）条件を決定
+                    isTarget = Math.random() < 0.5;
+                    
+                    if (isTarget) {
+                        // ターゲット条件：2個前と同じ数字
+                        currentNumber = stimulusHistory[stimulusHistory.length - 2];
+                    } else {
+                        // 非ターゲット条件：2個前と異なる数字をランダム選択
+                        const targetNumber = stimulusHistory[stimulusHistory.length - 2];
+                        const availableNumbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter(n => n !== targetNumber);
+                        currentNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
+                    }
+                } else {
+                    // 最初の2試行はランダム（ターゲット判定不可能）
+                    currentNumber = Math.floor(Math.random() * 10);
+                    isTarget = false;
+                }
                 
                 document.getElementById('stimulus').textContent = currentNumber;
                 document.getElementById('stimulus').className = 'stimulus';
@@ -990,12 +1011,19 @@
         }
         
         function updateShiftingInstruction() {
-            // タスク切り替えの決定（50%の確率で切り替え）
-            if (currentTrial > 1 && Math.random() < 0.5) {
-                previousTask = currentTask;
-                currentTask = currentTask === 'color' ? 'shape' : 'color';
+            // 最初の試行では切り替えなし
+            if (currentTrial === 1) {
+                previousTask = null;
+                // currentTaskは既に初期化時に設定済み
             } else {
-                previousTask = currentTask;
+                // 2試行目以降：50%の確率で切り替え
+                if (Math.random() < 0.5) {
+                    previousTask = currentTask;
+                    currentTask = currentTask === 'color' ? 'shape' : 'color';
+                } else {
+                    previousTask = currentTask;
+                    // currentTaskは変更なし（repeat条件）
+                }
             }
             
             const header = document.getElementById('taskHeader');
@@ -1127,7 +1155,8 @@
                         <p style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-top: 5px;">
                             • 各課題のデータは完了時に自動ダウンロードされました<br>
                             • ダウンロードフォルダをご確認ください<br>
-                            • データはメモリ効率のため端末には保存されていません
+                            • データはメモリ効率のため端末には保存されていません<br>
+                            • 出題割合：各課題とも条件バランスが50%ずつに調整済み
                         </p>
                     </div>
                 </div>
@@ -1170,6 +1199,13 @@
                 const matchPercentage = validTrials.length > 0 ? (matchTrials.length / validTrials.length * 100).toFixed(1) : 0;
                 const mismatchPercentage = validTrials.length > 0 ? (mismatchTrials.length / validTrials.length * 100).toFixed(1) : 0;
                 specialMetric = `<div class="result-item">一致条件: ${matchPercentage}% (${matchTrials.length}試行)</div><div class="result-item">不一致条件: ${mismatchPercentage}% (${mismatchTrials.length}試行)</div>`;
+            } else if (taskType === 'nback') {
+                // n-back課題のターゲット・非ターゲット割合を表示
+                const targetTrials = validTrials.filter(d => d.correctAnswer === true);
+                const nonTargetTrials = validTrials.filter(d => d.correctAnswer === false);
+                const targetPercentage = validTrials.length > 0 ? (targetTrials.length / validTrials.length * 100).toFixed(1) : 0;
+                const nonTargetPercentage = validTrials.length > 0 ? (nonTargetTrials.length / validTrials.length * 100).toFixed(1) : 0;
+                specialMetric = `<div class="result-item">ターゲット条件: ${targetPercentage}% (${targetTrials.length}試行)</div><div class="result-item">非ターゲット条件: ${nonTargetPercentage}% (${nonTargetTrials.length}試行)</div>`;
             }
             
             return { 
