@@ -453,18 +453,18 @@
                 <div class="task-card" data-task="nback" onclick="selectTask('nback')">
                     <h3>🧠 n-back課題</h3>
                     <p><strong>ワーキングメモリの測定</strong></p>
-                    <p>2個前の数字と同じかどうかを判断します。</p>
+                    <p>3個前の数字と同じかどうかを判断します。</p>
                     <div class="task-example">
                         <div style="margin: 10px 0;">
                             <strong>一致条件の例:</strong><br>
-                            7 → 3 → 7 → 3番目の「7」は2個前と同じなので「一致」
+                            7 → 3 → 9 → 7 → 4番目の「7」は3個前と同じなので「一致」
                         </div>
                         <div style="margin: 10px 0;">
                             <strong>不一致条件の例:</strong><br>
-                            7 → 3 → 5 → 3番目の「5」は2個前(7)と違うので「不一致」
+                            7 → 3 → 9 → 5 → 4番目の「5」は3個前(7)と違うので「不一致」
                         </div>
                         <div style="color: #4ECDC4; font-size: 0.9rem;">
-                            常に2個前の数字を覚えておくことが重要！
+                            常に3個前の数字を覚えておくことが重要！
                         </div>
                     </div>
                 </div>
@@ -811,7 +811,7 @@
                 flanker: 'フランカー課題：中央の矢印の向きを判断してください',
                 stroop: 'ストループ課題：上段のフォントカラーと下段の色名が一致するか判断してください',
                 shifting: 'シフティング課題：指示に従って色または形を判断してください',
-                nback: '2-back課題：2個前と同じ数字が現れたら「一致」を選択してください'
+                nback: '3-back課題：3個前と同じ数字が現れたら「一致」を選択してください'
             };
             
             document.getElementById('taskHeader').textContent = headers[taskType];
@@ -1004,23 +1004,23 @@
                 let currentNumber;
                 let isTarget;
                 
-                if (stimulusHistory.length >= 2) {
+                if (stimulusHistory.length >= 3) {
                     // 30%の確率でターゲット（一致）条件を決定
                     const shouldBeTarget = Math.random() < 0.3;
                     
                     if (shouldBeTarget) {
-                        // ターゲット条件：2個前と同じ数字
-                        currentNumber = stimulusHistory[stimulusHistory.length - 2];
+                        // ターゲット条件：3個前と同じ数字
+                        currentNumber = stimulusHistory[stimulusHistory.length - 3];
                         isTarget = true;
                     } else {
-                        // 非ターゲット条件：2個前と異なる数字をランダム選択
-                        const targetNumber = stimulusHistory[stimulusHistory.length - 2];
+                        // 非ターゲット条件：3個前と異なる数字をランダム選択
+                        const targetNumber = stimulusHistory[stimulusHistory.length - 3];
                         const availableNumbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter(n => n !== targetNumber);
                         currentNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
                         isTarget = false;
                     }
                 } else {
-                    // 最初の2試行はランダム（ターゲット判定不可能）
+                    // 最初の3試行はランダム（ターゲット判定不可能）
                     currentNumber = Math.floor(Math.random() * 10);
                     isTarget = false;
                 }
